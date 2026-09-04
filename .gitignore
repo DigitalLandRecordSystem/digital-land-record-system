@@ -216,3 +216,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---- Digital Land Record System ----
+
+# SQLite database (template only covers db.sqlite3 by name)
+*.db
+*.sqlite3
+*.db-journal
+
+# Server master key — private key material, never commit
+master_key.json
+*.pem
+*.key
