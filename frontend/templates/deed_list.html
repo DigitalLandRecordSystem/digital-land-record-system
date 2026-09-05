@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Deeds{% endblock %}
+{% block content %}
+<div class="row-between">
+  <h1>Deeds</h1>
+  <a class="btn" href="{{ url_for('deeds.create') }}">New deed</a>
+</div>
+
+{% if deeds %}
+  <table class="table">
+    <thead><tr><th>Plot</th><th>District</th><th>Key</th><th>Updated</th></tr></thead>
+    <tbody>
+    {% for d in deeds %}
+      <tr>
+        <td>
+          {% if d.intact %}
+            <a href="{{ url_for('deeds.view', deed_id=d.deed_id) }}">{{ d.plot_no }}</a>
+          {% else %}
+            <span class="tampered">Integrity check failed</span>
+          {% endif %}
+        </td>
+        <td>{{ d.district or '—' }}</td>
+        <td>v{{ d.key_version }}</td>
+        <td class="note">{{ d.updated_at[:16].replace('T', ' ') }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+    <div class="card empty">No deeds yet. <a href="{{ url_for('deeds.create') }}">Create the first one.</a></div>
+{% endif %}
+{% endblock %}

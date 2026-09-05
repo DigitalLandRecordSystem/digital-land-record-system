@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1>Welcome, {{ details.username }}</h1>
+<p class="lede">Your name and email are decrypted from storage on each request.</p>
+
+<div class="stats">
+  <div class="stat">
+    <div class="n">{{ deed_count }}</div>
+    <div class="k">{{ 'Deeds visible' if user['role'] == 'ADMIN' else 'Deeds owned' }}</div>
+  </div>
+  <div class="stat {{ 'alert' if flagged }}">
+    <div class="n">{{ flagged }}</div>
+    <div class="k">Integrity failures</div>
+  </div>
+  <div class="stat">
+    <div class="n">2</div>
+    <div class="k">Keypairs held</div>
+  </div>
+</div>
+
+<div class="card">
+  <dl>
+    <dt>Email</dt><dd>{{ details.email }}</dd>
+    <dt>Role</dt><dd>{{ details.role }}</dd>
+    <dt>Registered</dt><dd>{{ details.created_at[:10] }}</dd>
+  </dl>
+</div>
+
+<p><a href="{{ url_for('deeds.index') }}">Manage deeds →</a></p>
+{% endblock %}

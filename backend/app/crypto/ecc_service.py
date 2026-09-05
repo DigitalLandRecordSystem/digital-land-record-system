@@ -85,7 +85,7 @@ def encode_point(chunk: bytes):
     for offset in range(K_SLACK):
         x = (m * K_SLACK + offset) % P
         rhs = (x * x * x + A * x + B) % P
-        y = y = pow(rhs, (P + 1) // 4, P)   # sqrt shortcut: valid as P % 4 == 3(rhs, (P + 1) // 4, P)   # sqrt shortcut: valid as P % 4 == 3
+        y = pow(rhs, (P + 1) // 4, P)   # sqrt shortcut: valid because P % 4 == 3
         if (y * y - rhs) % P == 0:
             return (x, y)
     raise ValueError("failed to encode chunk onto the curve")

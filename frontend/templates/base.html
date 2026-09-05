@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Land Records{% endblock %} · Digital Land Record System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="{% if user %}app{% else %}plain{% endif %}">
+
+{% if user %}
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="mark">DLR</span>
+      <span class="brand-text">Digital Land<br>Record System</span>
+    </div>
+    <nav>
+      <a href="{{ url_for('main.dashboard') }}"
+         class="{{ 'on' if request.endpoint == 'main.dashboard' }}">Dashboard</a>
+      <a href="{{ url_for('deeds.index') }}"
+         class="{{ 'on' if request.blueprint == 'deeds' }}">Deeds</a>
+    </nav>
+    <div class="who">
+      <span class="badge {{ user['role']|lower }}">{{ user['role'] }}</span>
+      <form method="post" action="{{ url_for('auth.logout') }}">
+        <button type="submit" class="link">Sign out</button>
+      </form>
+    </div>
+  </aside>
+{% endif %}
+
+<main>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <p class="flash {{ category }}">{{ message }}</p>
+    {% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+
+</body>
+</html>

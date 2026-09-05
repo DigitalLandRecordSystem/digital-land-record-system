@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit deed' if deed else 'New deed' }}{% endblock %}
+{% block content %}
+<h1>{{ 'Edit deed' if deed else 'New deed' }}</h1>
+<form method="post" class="card">
+  <label>Plot number
+    <input name="plot_no" value="{{ form.plot_no or '' }}"
+           {% if deed %}disabled{% endif %} required>
+  </label>
+  {% if deed %}
+    <p class="note">The plot number identifies the parcel and cannot be changed.</p>
+  {% endif %}
+  <label>District <input name="district" value="{{ form.district or '' }}" required></label>
+  <label>Area (acres) <input name="area" value="{{ form.area or '' }}" required></label>
+  <label>Deed content
+    <textarea name="content" rows="7" required>{{ form.content or '' }}</textarea>
+  </label>
+  <button type="submit">{{ 'Save changes' if deed else 'Create deed' }}</button>
+</form>
+<p><a href="{{ url_for('deeds.index') }}">Back to deeds</a></p>
+{% endblock %}

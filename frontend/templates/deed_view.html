@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ deed.plot_no }}{% endblock %}
+{% block content %}
+<div class="row-between">
+  <h1>{{ deed.plot_no }}</h1>
+  {% if deed.owner_id == user['user_id'] %}
+    <a class="btn" href="{{ url_for('deeds.edit', deed_id=deed.deed_id) }}">Edit</a>
+  {% endif %}
+</div>
+
+<div class="card">
+  <dl>
+    <dt>District</dt><dd>{{ deed.district }}</dd>
+    <dt>Area</dt><dd>{{ deed.area }} acres</dd>
+    <dt>Content</dt><dd>{{ deed.content }}</dd>
+  </dl>
+</div>
+
+<div class="card">
+  <p class="note">
+    Stored encrypted with ECC under key version {{ deed.key_version }}.
+    Integrity verified by HMAC on retrieval.
+    Last updated {{ deed.updated_at[:16].replace('T', ' ') }}.
+  </p>
+</div>
+<p><a href="{{ url_for('deeds.index') }}">Back to deeds</a></p>
+{% endblock %}

@@ -32,12 +32,6 @@ def _decrypt_field(stored: str, private_key) -> str:
     return rsa_service.decrypt(base64.b64decode(stored), private_key).decode("utf-8")
 
 
-def _row_tag(username_enc, email_enc, contact_enc, role) -> str:
-    """HMAC over the encrypted fields, to detect tampering in the database."""
-    payload = "|".join([username_enc, email_enc, contact_enc or "", role])
-    return hmac_hex(BLIND_INDEX_KEY_FOR_TAGS, payload)
-
-
 def register_user(conn, username: str, email: str, password: str,
                   contact: str = None, role: str = ROLE_OWNER) -> str:
     """Register a user. Returns the new user_id.

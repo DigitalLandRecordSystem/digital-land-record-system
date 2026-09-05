@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Integrity failure{% endblock %}
+{% block content %}
+<h1>Integrity failure</h1>
+<div class="card">
+  <p class="tampered">{{ message }}</p>
+  <p class="note">
+    The HMAC tag stored with this record does not match its ciphertexts.
+    The record was altered in the database rather than through the
+    application, so it will not be decrypted or displayed.
+  </p>
+  <p class="note">Deed reference: {{ deed_id }}</p>
+</div>
+<p><a href="{{ url_for('deeds.index') }}">Back to deeds</a></p>
+{% endblock %}
