@@ -22,7 +22,10 @@ def _secret(name: str) -> bytes:
             f"{name} missing or malformed in .env "
             f"(expected 64 hex characters, got {len(value)})"
         )
-    return bytes.fromhex(value)
+    try:
+        return bytes.fromhex(value)
+    except ValueError:
+        raise RuntimeError(f"{name} in .env is not valid hexadecimal") from None
 
 
 # ---- paths ----
@@ -38,4 +41,4 @@ SESSION_LIFETIME_MINUTES = int(os.getenv("SESSION_LIFETIME_MINUTES", "30"))
 # ---- secrets (never committed; see .env.example) ----
 BLIND_INDEX_KEY  = _secret("BLIND_INDEX_KEY")
 INTEGRITY_KEY    = _secret("INTEGRITY_KEY")
-FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "")
+FLASK_SECRET_KEY = _secret("FLASK_SECRET_KEY")

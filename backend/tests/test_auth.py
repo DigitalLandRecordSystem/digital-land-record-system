@@ -51,9 +51,10 @@ def test_verify_rejects_distant_and_malformed():
 # ---- login flow ----
 
 def test_full_login(conn, account):
-    token = auth.start_login(conn, "maimuna", "hunter2")
+    pending = auth.start_login(conn, "maimuna", "hunter2")
     code = totp.generate_code(auth.get_totp_secret(conn, account))
-    assert auth.complete_login(conn, token, code)
+    token = auth.complete_login(conn, pending, code)
+    assert token != pending
     assert auth.current_user(conn, token)["user_id"] == account
 
 
@@ -61,6 +62,15 @@ def test_session_unusable_before_second_factor(conn, account):
     """The core two-step requirement: password alone grants nothing."""
     token = auth.start_login(conn, "maimuna", "hunter2")
     assert auth.current_user(conn, token) is None
+
+
+def test_pending_token_dies_after_verification(conn, account):
+    """Token rotation at the MFA boundary: the pre-MFA token is never upgraded."""
+    pending = auth.start_login(conn, "maimuna", "hunter2")
+    code = totp.generate_code(auth.get_totp_secret(conn, account))
+    token = auth.complete_login(conn, pending, code)
+    assert auth.current_user(conn, pending) is None
+    assert auth.current_user(conn, token) is not None
 
 
 def test_wrong_password_rejected(conn, account):
@@ -81,8 +91,9 @@ def test_wrong_code_rejected(conn, account):
 
 
 def test_logout_revokes(conn, account):
-    token = auth.start_login(conn, "maimuna", "hunter2")
-    auth.complete_login(conn, token, totp.generate_code(auth.get_totp_secret(conn, account)))
+    pending = auth.start_login(conn, "maimuna", "hunter2")
+    code = totp.generate_code(auth.get_totp_secret(conn, account))
+    token = auth.complete_login(conn, pending, code)
     assert auth.logout(conn, token)
     assert auth.current_user(conn, token) is None
 

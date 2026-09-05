@@ -44,18 +44,26 @@ def start_login(conn, username: str, password: str,
         ip_address=ip_address, user_agent=user_agent)
 
 
-def complete_login(conn, token: str, code: str) -> bool:
-    """Step two: verify the one-time code and upgrade the session."""
+def complete_login(conn, token: str, code: str) -> str:
+    """Step two: verify the one-time code and issue a fresh, verified session.
+
+    The pending token is revoked and replaced rather than upgraded, so a token
+    observed before the second factor can never become an authenticated session.
+    """
     row = session_service.validate_session(conn, token, require_mfa=False)
     if row is None:
         raise AuthError("session is invalid or expired")
+    if row["mfa_verified"]:
+        raise AuthError("session already verified")
 
     secret = get_totp_secret(conn, row["user_id"])
     if not totp.verify_code(secret, code):
         raise AuthError("invalid verification code")
 
-    session_service.mark_mfa_verified(conn, token)
-    return True
+    session_service.revoke_session(conn, token)
+    return session_service.create_session(
+        conn, row["user_id"], mfa_verified=True,
+        ip_address=row["ip_address"], user_agent=row["user_agent"])
 
 
 def current_user(conn, token: str):
