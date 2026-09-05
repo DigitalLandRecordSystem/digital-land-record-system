@@ -40,6 +40,7 @@ CREATE TABLE user_keys (
     version         INTEGER NOT NULL,
     public_key      TEXT NOT NULL,          -- plaintext is correct; it's public
     private_key_enc TEXT NOT NULL,          -- RSA-wrapped under the server master key
+    hmac_tag        TEXT NOT NULL,          -- integrity over the whole key record
     is_active       INTEGER NOT NULL DEFAULT 1,
     created_at      TEXT NOT NULL,
     retired_at      TEXT,

@@ -81,7 +81,7 @@ def create_deed(conn, owner_id: str, plot_no: str, district: str,
                     (plot_idx,)).fetchone():
         raise DeedError("a deed for that plot number already exists")
 
-    public, _, version = km.get_active_key(conn, owner_id, km.ECC)
+    public, version = km.get_public_key(conn, owner_id, km.ECC)
 
     plot_enc     = _encrypt(plot_no, public)
     district_enc = _encrypt(district, public)
@@ -191,7 +191,7 @@ def update_deed(conn, deed_id: str, user, district: str,
     if not (district and area and content):
         raise DeedError("all deed fields are required")
 
-    public, _, version = km.get_active_key(conn, row["owner_id"], km.ECC)
+    public, version = km.get_public_key(conn, row["owner_id"], km.ECC)
 
     # The plot number is re-encrypted too, so the whole row shares one key
     # version. Its value is unchanged; only the ciphertext is fresh.
@@ -233,7 +233,7 @@ def change_owner(conn, deed_id: str, new_owner_id: str) -> None:
     fields = [_decrypt(row[col], old_private) for col in
               ("plot_no_enc", "district_enc", "area_enc", "content_enc")]
 
-    public, _, version = km.get_active_key(conn, new_owner_id, km.ECC)
+    public, version = km.get_public_key(conn, new_owner_id, km.ECC)
     plot_enc, district_enc, area_enc, content_enc = [
         _encrypt(value, public) for value in fields]
     tag = compute_tag(plot_enc, district_enc, area_enc, content_enc,
@@ -255,3 +255,17 @@ def plot_number(conn, deed_id: str) -> str:
     row = _fetch(conn, deed_id)
     _, private = km.get_key_version(conn, row["owner_id"], km.ECC, row["key_version"])
     return _decrypt(row["plot_no_enc"], private)
+
+
+def reencrypt_owned(conn, owner_id: str) -> int:
+    """Re-encrypt every deed this user owns under their active ECC key.
+
+    Called after a key rotation to migrate records forward. Reuses the
+    transfer path with the owner unchanged: decrypt under the recorded key
+    version, re-encrypt under the active one.
+    """
+    rows = conn.execute("SELECT deed_id FROM deeds WHERE owner_id = ?",
+                        (owner_id,)).fetchall()
+    for row in rows:
+        change_owner(conn, row["deed_id"], owner_id)
+    return len(rows)

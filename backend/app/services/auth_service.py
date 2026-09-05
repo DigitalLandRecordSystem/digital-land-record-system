@@ -12,14 +12,14 @@ class AuthError(Exception):
 
 
 def get_totp_secret(conn, user_id: str) -> str:
-    """Decrypt a user's stored TOTP secret."""
+    """Decrypt a user's stored TOTP secret, under the key version that wrote it."""
     row = conn.execute(
-        "SELECT totp_secret_enc FROM users WHERE user_id = ?", (user_id,)
-    ).fetchone()
+        "SELECT totp_secret_enc, key_version FROM users WHERE user_id = ?",
+        (user_id,)).fetchone()
     if row is None or row["totp_secret_enc"] is None:
         raise LookupError("no TOTP secret for this user")
 
-    _, private, _ = km.get_active_key(conn, user_id, km.RSA)
+    _, private = km.get_key_version(conn, user_id, km.RSA, row["key_version"])
     ciphertext = base64.b64decode(row["totp_secret_enc"])
     return rsa_service.decrypt(ciphertext, private).decode()
 

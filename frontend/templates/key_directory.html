@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Key directory{% endblock %}
+{% block content %}
+<h1>Public key directory</h1>
+<p class="lede">
+  Every account's active public keys. This is the distribution step: any party
+  may fetch any user's public key in order to encrypt a record for them, and
+  nothing secret is exposed by publishing it. Private keys are never served.
+</p>
+
+<table class="table">
+  <thead>
+    <tr><th>Account</th><th>Role</th><th>Algorithm</th><th>Version</th><th>Fingerprint</th></tr>
+  </thead>
+  <tbody>
+  {% for e in entries %}
+    <tr>
+      <td class="note">{{ e.user_id[:8] }}</td>
+      <td>{{ e.role }}</td>
+      <td>{{ e.algorithm }}</td>
+      <td>v{{ e.version }}</td>
+      <td class="code" style="font-size:13px">{{ e.fingerprint }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<p><a href="{{ url_for('keys.index') }}">Back to keys</a></p>
+{% endblock %}

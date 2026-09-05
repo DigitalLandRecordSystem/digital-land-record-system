@@ -61,7 +61,7 @@ def request_transfer(conn, deed_id: str, requester, to_username: str) -> str:
         (deed_id, PENDING)).fetchone():
         raise TransferError("a transfer for this deed is already pending")
 
-    _, _, version = km.get_active_key(conn, requester["user_id"], km.RSA)
+    _, version = km.get_public_key(conn, requester["user_id"], km.RSA)
     request_id = str(uuid.uuid4())
 
     conn.execute(
@@ -117,9 +117,10 @@ def _record(conn, row, status: str, admin, reason) -> None:
     """Write the decision, its encrypted reason, and its HMAC."""
     decided_on = _now()
     reason_enc = None
+    key_version = row["key_version"]
     if reason:
         # Encrypted under the requester's key, so only they can read it.
-        public, _, _ = km.get_active_key(conn, row["from_user_id"], km.RSA)
+        public, key_version = km.get_public_key(conn, row["from_user_id"], km.RSA)
         reason_enc = base64.b64encode(
             rsa_service.encrypt(reason, public)).decode()
 
@@ -131,10 +132,10 @@ def _record(conn, row, status: str, admin, reason) -> None:
     conn.execute(
         """UPDATE transfer_requests
            SET status = ?, reason_enc = ?, decided_on = ?, decided_by = ?,
-               approval_hmac = ?
+               approval_hmac = ?, key_version = ?
            WHERE request_id = ?""",
         (status, reason_enc, decided_on, admin["user_id"],
-         _decision_tag(decision), row["request_id"]),
+         _decision_tag(decision), key_version, row["request_id"]),
     )
     conn.commit()
 

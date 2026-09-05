@@ -19,11 +19,14 @@ def create_app():
     from app.routes.deed_routes import bp as deed_bp
     from app.routes.profile_routes import bp as profile_bp
     from app.routes.transfer_routes import bp as transfer_bp
+    from app.routes.key_routes import bp as key_bp
+    
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(deed_bp)
     app.register_blueprint(profile_bp)
     app.register_blueprint(transfer_bp)
+    app.register_blueprint(key_bp)
 
     @app.context_processor
     def inject_user():

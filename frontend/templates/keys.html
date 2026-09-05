@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Keys{% endblock %}
+{% block content %}
+<h1>Key management</h1>
+<p class="lede">
+  Two keypairs per account. RSA protects account and profile data; ECC
+  protects deed content. Private keys are stored encrypted under the server
+  master key and never appear here.
+</p>
+
+<table class="table">
+  <thead>
+    <tr><th>Algorithm</th><th>Version</th><th>Fingerprint</th>
+        <th>Status</th><th>Integrity</th><th>Created</th></tr>
+  </thead>
+  <tbody>
+  {% for k in keys %}
+    <tr>
+      <td>{{ k.algorithm }}</td>
+      <td>v{{ k.version }}</td>
+      <td class="code" style="font-size:13px">{{ k.fingerprint }}</td>
+      <td>
+        {% if k.is_active %}
+          <span class="badge status-approved">ACTIVE</span>
+        {% else %}
+          <span class="badge owner">RETIRED</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if k.intact %}
+          <span class="note">verified</span>
+        {% else %}
+          <span class="tampered">FAILED</span>
+        {% endif %}
+      </td>
+      <td class="note">{{ k.created_at[:16].replace('T', ' ') }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<p class="note" style="margin-top:12px">
+  Public keys are published, not secret — see the
+  <a href="{{ url_for('keys.directory') }}">key directory</a>. They are covered
+  by an HMAC tag so that substituting one is detected.
+</p>
+
+<div class="card" style="margin-top:18px">
+  <p class="note">
+    Rotating issues a new version and retires the current one. Retired keys are
+    kept, not deleted, so records written under them stay readable — each record
+    records the key version that encrypted it.
+  </p>
+  <div class="actions">
+    <form method="post" action="{{ url_for('keys.rotate', algorithm='RSA') }}">
+      <button type="submit">Rotate RSA key</button>
+    </form>
+    <form method="post" action="{{ url_for('keys.rotate', algorithm='ECC') }}">
+      <button type="submit">Rotate ECC key</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <p class="note">
+    Migration re-encrypts your existing records under the current keys. Without
+    it, older records stay readable through their retired key indefinitely.
+  </p>
+  <form method="post" action="{{ url_for('keys.migrate') }}">
+    <button type="submit">Re-encrypt my records</button>
+  </form>
+</div>
+{% endblock %}

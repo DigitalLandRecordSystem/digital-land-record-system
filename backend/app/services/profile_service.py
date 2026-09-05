@@ -77,7 +77,7 @@ def update_profile(conn, user_id: str, **values) -> None:
     if unknown:
         raise ProfileError(f"unknown profile field(s): {', '.join(sorted(unknown))}")
 
-    public, _, version = km.get_active_key(conn, user_id, km.RSA)
+    public, version = km.get_public_key(conn, user_id, km.RSA)
     enc = {f"{f}_enc": _encrypt(values.get(f), public) for f in FIELDS}
     tag = compute_tag(*(enc[f"{f}_enc"] for f in FIELDS), user_id)
     now = _now()
@@ -109,3 +109,12 @@ def verify_profile_integrity(conn, user_id: str) -> bool:
     if row is None:
         raise LookupError("no profile for this user")
     return verify_tag(row["hmac_tag"], *(row[f"{f}_enc"] for f in FIELDS), user_id)
+
+
+def reencrypt(conn, user_id: str) -> bool:
+    """Re-encrypt a profile under the user's active RSA key. True if one existed."""
+    profile = get_profile(conn, user_id)
+    if not profile["exists"]:
+        return False
+    update_profile(conn, user_id, **{f: profile[f] for f in FIELDS})
+    return True

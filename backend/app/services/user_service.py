@@ -98,7 +98,7 @@ def get_user_details(conn, user_id: str) -> dict:
     if row is None:
         raise LookupError("no such user")
 
-    _, private, _ = km.get_active_key(conn, user_id, km.RSA)
+    _, private = km.get_key_version(conn, user_id, km.RSA, row["key_version"])
     return {
         "user_id": row["user_id"],
         "username": _decrypt_field(row["username_enc"], private),
@@ -115,3 +115,36 @@ def verify_user_integrity(conn, user_id: str) -> bool:
         raise LookupError("no such user")
     return verify_tag(row["hmac_tag"], row["username_enc"],
                       row["email_enc"], row["contact_enc"], row["role"])
+
+
+def reencrypt_account(conn, user_id: str) -> None:
+    """Re-encrypt account fields under the user's active RSA key.
+
+    Blind indexes are unaffected: they are HMACs under a separate key, not
+    RSA ciphertexts, so lookup keeps working across a rotation.
+    """
+    row = conn.execute("SELECT * FROM users WHERE user_id = ?",
+                       (user_id,)).fetchone()
+    if row is None:
+        raise LookupError("no such user")
+
+    _, old_private = km.get_key_version(conn, user_id, km.RSA, row["key_version"])
+    username = _decrypt_field(row["username_enc"], old_private)
+    email = _decrypt_field(row["email_enc"], old_private)
+    contact = _decrypt_field(row["contact_enc"], old_private)
+    totp_secret = _decrypt_field(row["totp_secret_enc"], old_private)
+
+    public, version = km.get_public_key(conn, user_id, km.RSA)
+    username_enc = _encrypt_field(username, public)
+    email_enc = _encrypt_field(email, public)
+    contact_enc = _encrypt_field(contact, public)
+    totp_enc = _encrypt_field(totp_secret, public)
+    tag = compute_tag(username_enc, email_enc, contact_enc, row["role"])
+
+    conn.execute(
+        """UPDATE users SET username_enc = ?, email_enc = ?, contact_enc = ?,
+               totp_secret_enc = ?, key_version = ?, hmac_tag = ?
+           WHERE user_id = ?""",
+        (username_enc, email_enc, contact_enc, totp_enc, version, tag, user_id),
+    )
+    conn.commit()
