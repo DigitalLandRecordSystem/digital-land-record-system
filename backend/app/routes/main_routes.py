@@ -1,7 +1,7 @@
 """Landing page and dashboard."""
 from flask import Blueprint, redirect, render_template, url_for
 
-from app.web.deps import current_user, get_conn, login_required
+from app.routes.deps import current_user, get_conn, login_required
 
 bp = Blueprint("main", __name__)
 

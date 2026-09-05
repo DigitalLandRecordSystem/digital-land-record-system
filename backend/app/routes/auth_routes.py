@@ -7,7 +7,7 @@ from flask import (Blueprint, flash, make_response, redirect, render_template,
 from app.config import SESSION_LIFETIME_MINUTES
 from app.crypto import totp
 from app.services import auth_service, session_service, user_service
-from app.web.deps import (COOKIE_KW, PENDING_COOKIE, SESSION_COOKIE,
+from app.routes.deps import (COOKIE_KW, PENDING_COOKIE, SESSION_COOKIE,
                           current_user, get_conn, login_required)
 
 bp = Blueprint("auth", __name__)

@@ -66,34 +66,48 @@ observed before verification can never become an authenticated session.
 
 Requires Python 3.11 or newer.
 
+
 cd backend
+
 python -m venv venv
+
 venv\Scripts\activate # Windows
+
 source venv/bin/activate # macOS / Linux
+
 pip install -r requirements.txt
+
 
 Copy `.env.example` to `.env` and fill in the three secrets. Generate each one
 separately:
 
 Generate secret keys: (3)
+
 python -c "import secrets; print(secrets.token_hex(32))"
+
 output: Each value is 64 hexadecimal characters, written bare — no quotes, no brackets,
 no trailing spaces.
 
+
 Create the database and server master key:
+
 python init_setup.py
 
 
 ## Running
 cd backend
+
 venv\Scripts\activate
+
 python run.py
 
 Then open http://127.0.0.1:5000
 
 ## Tests
 cd backend
+
 venv\Scripts\activate
+
 python -m pytest tests/ -v
 
 Test vectors are taken from published references: FIPS 180-4 for SHA-256 and
@@ -103,17 +117,28 @@ RFC 4231 for HMAC.
 
 ## Project structure
 backend/
+
 app/
+
 crypto/ from-scratch primitives: SHA-256, HMAC, KDF, RSA, ECC,
 key manager, TOTP, blind index, integrity
+
 services/ business logic: users, auth, sessions, deeds, profiles
+
 database/ connection handling
+
 web/ Flask blueprints, access-control decorators
+
 templates/ Jinja templates
+
 static/ stylesheet
+
 tests/
+
 run.py development entry point
+
 init_setup.py creates the database and master key
+
 database/
 schema.sql
 

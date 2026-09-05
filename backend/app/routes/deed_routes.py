@@ -3,7 +3,7 @@ from flask import (Blueprint, abort, flash, redirect, render_template,
                    request, url_for)
 
 from app.services import deed_service as ds
-from app.web.deps import current_user, get_conn, login_required
+from app.routes.deps import current_user, get_conn, login_required
 
 bp = Blueprint("deeds", __name__, url_prefix="/deeds")
 

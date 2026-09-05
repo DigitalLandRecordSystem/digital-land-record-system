@@ -23,5 +23,18 @@
     Last updated {{ deed.updated_at[:16].replace('T', ' ') }}.
   </p>
 </div>
+
+{% if deed.owner_id == user['user_id'] %}
+  <div class="card">
+    <p class="note">Transfer ownership. An administrator must approve the request.</p>
+    <form method="post"
+          action="{{ url_for('transfers.create', deed_id=deed.deed_id) }}"
+          class="inline-form">
+      <input name="to_username" placeholder="Recipient username" required>
+      <button type="submit">Request transfer</button>
+    </form>
+  </div>
+{% endif %}
+
 <p><a href="{{ url_for('deeds.index') }}">Back to deeds</a></p>
 {% endblock %}

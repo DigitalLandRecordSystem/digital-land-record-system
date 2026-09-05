@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Transfers{% endblock %}
+{% block content %}
+<h1>Transfers</h1>
+<p class="lede">Requests you have sent or received.</p>
+
+{% if transfers %}
+  {% for t in transfers %}
+    <div class="card">
+      <div class="row-between" style="margin:0 0 10px">
+        <strong>{{ t.plot_no }}</strong>
+        <span class="badge status-{{ t.status|lower }}">{{ t.status }}</span>
+      </div>
+      <p class="note">
+        {{ t.from_username }} → {{ t.to_username }},
+        requested {{ t.requested_on[:16].replace('T', ' ') }}
+        {%- if t.decided_on %}, decided {{ t.decided_on[:16].replace('T', ' ') }}{% endif %}
+      </p>
+      {% if t.reason %}
+        <p class="note"><strong>Reason:</strong> {{ t.reason }}</p>
+      {% endif %}
+      {% if not t.intact %}
+        <p class="tampered">This decision record failed its integrity check.</p>
+      {% endif %}
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="card empty">No transfer requests.</div>
+{% endif %}
+{% endblock %}

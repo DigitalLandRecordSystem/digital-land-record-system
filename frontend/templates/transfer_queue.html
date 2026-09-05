@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Transfer queue{% endblock %}
+{% block content %}
+<h1>Transfer queue</h1>
+<p class="lede">Pending requests awaiting an administrator's decision.</p>
+
+{% if transfers %}
+  {% for t in transfers %}
+    <div class="card">
+      <div class="row-between" style="margin:0 0 10px">
+        <strong>{{ t.plot_no }}</strong>
+        <span class="note">{{ t.requested_on[:16].replace('T', ' ') }}</span>
+      </div>
+      <p class="note">{{ t.from_username }} → {{ t.to_username }}</p>
+
+      <div class="actions">
+        <form method="post"
+              action="{{ url_for('transfers.approve', request_id=t.request_id) }}">
+          <button type="submit">Approve</button>
+        </form>
+        <form method="post"
+              action="{{ url_for('transfers.reject', request_id=t.request_id) }}"
+              class="reject">
+          <input name="reason" placeholder="Reason for rejection" required>
+          <button type="submit" class="danger">Reject</button>
+        </form>
+      </div>
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="card empty">Nothing awaiting a decision.</div>
+{% endif %}
+{% endblock %}

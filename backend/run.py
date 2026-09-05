@@ -1,5 +1,5 @@
 """Development entry point: python run.py"""
-from app.web import create_app
+from app.routes import create_app
 
 app = create_app()
 

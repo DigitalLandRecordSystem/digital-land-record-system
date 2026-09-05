@@ -19,6 +19,14 @@
          class="{{ 'on' if request.endpoint == 'main.dashboard' }}">Dashboard</a>
       <a href="{{ url_for('deeds.index') }}"
          class="{{ 'on' if request.blueprint == 'deeds' }}">Deeds</a>
+      <a href="{{ url_for('profile.index') if false else url_for('profile.view') }}"
+         class="{{ 'on' if request.blueprint == 'profile' }}">Profile</a>
+      <a href="{{ url_for('transfers.index') }}"
+         class="{{ 'on' if request.blueprint == 'transfers' }}">Transfers</a>
+      {% if user['role'] == 'ADMIN' %}
+        <a href="{{ url_for('transfers.queue') }}"
+           class="{{ 'on' if request.endpoint == 'transfers.queue' }}">Queue</a>
+      {% endif %}
     </nav>
     <div class="who">
       <span class="badge {{ user['role']|lower }}">{{ user['role'] }}</span>

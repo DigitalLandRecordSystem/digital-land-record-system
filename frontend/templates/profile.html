@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Profile{% endblock %}
+{% block content %}
+<div class="row-between">
+  <h1>Profile</h1>
+  <a class="btn" href="{{ url_for('profile.edit') }}">Edit profile</a>
+</div>
+
+<div class="card">
+  <dl>
+    <dt>Username</dt><dd>{{ details.username }}</dd>
+    <dt>Email</dt><dd>{{ details.email }}</dd>
+    <dt>Contact</dt><dd>{{ details.contact or '—' }}</dd>
+  </dl>
+</div>
+
+{% if profile.exists %}
+  <div class="card">
+    <dl>
+      <dt>Full name</dt><dd>{{ profile.full_name or '—' }}</dd>
+      <dt>Address</dt><dd>{{ profile.address or '—' }}</dd>
+      <dt>Phone</dt><dd>{{ profile.phone or '—' }}</dd>
+      <dt>National ID</dt><dd>{{ profile.nid or '—' }}</dd>
+    </dl>
+  </div>
+  <p class="note">
+    Encrypted with RSA under key version {{ profile.key_version }}.
+    Integrity verified by HMAC on retrieval.
+    Last updated {{ profile.updated_at[:16].replace('T', ' ') }}.
+  </p>
+{% else %}
+  <div class="card empty">
+    No profile details yet.
+    <a href="{{ url_for('profile.edit') }}">Add them.</a>
+  </div>
+{% endif %}
+{% endblock %}

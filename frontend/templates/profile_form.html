@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Edit profile{% endblock %}
+{% block content %}
+<h1>Edit profile</h1>
+<p class="lede">Every field below is encrypted with RSA before it reaches the database.</p>
+
+<form method="post" class="card">
+  <label>Full name <input name="full_name" value="{{ profile.full_name or '' }}"></label>
+  <label>Address <input name="address" value="{{ profile.address or '' }}"></label>
+  <label>Phone <input name="phone" value="{{ profile.phone or '' }}"></label>
+  <label>National ID <input name="nid" value="{{ profile.nid or '' }}"></label>
+  <button type="submit">Save profile</button>
+</form>
+<p><a href="{{ url_for('profile.view') }}">Back to profile</a></p>
+{% endblock %}

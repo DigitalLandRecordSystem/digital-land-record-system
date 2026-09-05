@@ -248,3 +248,10 @@ def change_owner(conn, deed_id: str, new_owner_id: str) -> None:
          version, tag, _now(), deed_id),
     )
     conn.commit()
+
+
+def plot_number(conn, deed_id: str) -> str:
+    """The decrypted plot number for a deed, for display in related records."""
+    row = _fetch(conn, deed_id)
+    _, private = km.get_key_version(conn, row["owner_id"], km.ECC, row["key_version"])
+    return _decrypt(row["plot_no_enc"], private)

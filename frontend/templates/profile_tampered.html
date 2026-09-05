@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Integrity failure{% endblock %}
+{% block content %}
+<h1>Integrity failure</h1>
+<div class="card">
+  <p class="tampered">{{ message }}</p>
+  <p class="note">
+    The HMAC tag stored with this profile does not match its ciphertexts, so
+    the record was altered directly in the database rather than through the
+    application. It will not be decrypted or displayed.
+  </p>
+</div>
+<p><a href="{{ url_for('main.dashboard') }}">Back to dashboard</a></p>
+{% endblock %}
