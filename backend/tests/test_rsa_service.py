@@ -36,7 +36,7 @@ def test_leading_zeros_preserved(keys):
 
 def test_text_roundtrip(keys):
     pub, priv = keys
-    text = "Plot 42, Gulshan, Dhaka. Owner: Sarah Chowdhury."
+    text = "Plot 42, Bunyland, Narnia. Owner: Maimuna Chowdhury."
     assert decrypt(encrypt(text, pub), priv).decode() == text
 
 def test_textbook_rsa_is_deterministic(keys):

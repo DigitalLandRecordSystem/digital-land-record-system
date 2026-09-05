@@ -38,7 +38,7 @@ def test_roundtrip_boundaries(keys):
 
 def test_text_roundtrip(keys):
     priv, pub = keys
-    deed = "Plot 42, Gulshan, Dhaka. Area: 5.5 katha. Owner: Sarah Chowdhury."
+    deed = "Plot 42, Bunyland, Narnia. Area: 5.5 acre. Owner: Maimuna Chowdhury."
     assert decrypt(encrypt(deed, pub), priv).decode() == deed
 
 def test_encryption_is_randomised(keys):

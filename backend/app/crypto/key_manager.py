@@ -77,10 +77,9 @@ def _new_keypair(algorithm: str):
     return public, private
 
 
-def create_key(conn, user_id: str, algorithm: str, version: int = 1) -> dict:
-    """Generate, wrap, and store a keypair. Returns the public key."""
-    public, private = _new_keypair(algorithm)
-
+def store_key(conn, user_id: str, algorithm: str,
+              public: dict, private: dict, version: int = 1) -> None:
+    """Store an already-generated keypair, wrapping the private half."""
     conn.execute(
         """INSERT INTO user_keys
            (key_id, user_id, algorithm, version, public_key,
@@ -91,7 +90,18 @@ def create_key(conn, user_id: str, algorithm: str, version: int = 1) -> dict:
          datetime.now(timezone.utc).isoformat()),
     )
     conn.commit()
+
+
+def create_key(conn, user_id: str, algorithm: str, version: int = 1) -> dict:
+    """Generate, wrap, and store a keypair. Returns the public key."""
+    public, private = _new_keypair(algorithm)
+    store_key(conn, user_id, algorithm, public, private, version)
     return public
+
+
+def new_keypair(algorithm: str):
+    """Public wrapper: generate a keypair without storing it."""
+    return _new_keypair(algorithm)
 
 
 def create_user_keys(conn, user_id: str) -> None:
