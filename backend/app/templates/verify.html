@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Verification{% endblock %}
+{% block content %}
+<h1>Verification</h1>
+<p class="note">Step 2 of 2 — one-time code. Your password alone grants no access.</p>
+<form method="post" class="card">
+  <label>Six-digit code
+    <input name="code" required autofocus inputmode="numeric"
+           pattern="[0-9]{6}" maxlength="6" autocomplete="off"></label>
+  <button type="submit">Verify</button>
+</form>
+<p class="note">Demonstration code for this window: <span class="code">{{ demo_code }}</span></p>
+{% endblock %}

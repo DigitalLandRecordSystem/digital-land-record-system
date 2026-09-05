@@ -1,12 +1,7 @@
-from flask import Flask
+"""Development entry point: python run.py"""
+from app.web import create_app
 
-app = Flask(__name__)
-
-
-@app.route("/")
-def home():
-    return "Digital Land Record System API Running"
-
+app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5000)

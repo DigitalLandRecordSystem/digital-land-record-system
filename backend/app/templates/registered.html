@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Registered{% endblock %}
+{% block content %}
+<h1>Account created</h1>
+<div class="card">
+  <p><strong>{{ username }}</strong> is registered. Your username, email and
+     one-time-password secret are stored encrypted.</p>
+  <p>Your verification secret:</p>
+  <p class="code">{{ secret }}</p>
+  <p class="note">This build derives codes with HMAC-SHA256, so it does not pair
+     with standard authenticator apps. The current code is displayed on the
+     verification page.</p>
+</div>
+<p><a href="{{ url_for('auth.login') }}">Continue to sign in</a></p>
+{% endblock %}
