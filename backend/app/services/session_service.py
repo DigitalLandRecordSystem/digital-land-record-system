@@ -14,16 +14,25 @@ from app.crypto.hashing import sha256_hex
 from app.crypto.random_gen import random_hex
 
 
+# A session awaiting its second factor is not a session yet, and must not
+# inherit the full lifetime. Five minutes is enough to read a code and type
+# it; beyond that the sign-in attempt is abandoned and must start again.
+PENDING_LIFETIME_MINUTES = 5
+
+
 def _now():
     return datetime.now(timezone.utc)
 
 
 def create_session(conn, user_id: str, mfa_verified: bool = False,
-                   ip_address: str = None, user_agent: str = None) -> str:
+                   ip_address: str = None, user_agent: str = None,
+                   lifetime_minutes: int = None) -> str:
     """Create a session and return the raw token (shown to the client once)."""
     token = random_hex(32)
     issued = _now()
-    expires = issued + timedelta(minutes=SESSION_LIFETIME_MINUTES)
+    if lifetime_minutes is None:
+        lifetime_minutes = SESSION_LIFETIME_MINUTES
+    expires = issued + timedelta(minutes=lifetime_minutes)
 
     conn.execute(
         """INSERT INTO sessions
@@ -55,16 +64,6 @@ def validate_session(conn, token: str, require_mfa: bool = True):
     if require_mfa and not row["mfa_verified"]:
         return None
     return row
-
-
-def mark_mfa_verified(conn, token: str) -> bool:
-    row = _lookup(conn, token)
-    if row is None:
-        return False
-    conn.execute("UPDATE sessions SET mfa_verified = 1 WHERE session_id = ?",
-                 (row["session_id"],))
-    conn.commit()
-    return True
 
 
 def revoke_session(conn, token: str) -> bool:

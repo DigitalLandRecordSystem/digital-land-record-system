@@ -5,7 +5,12 @@ from app.crypto import key_manager as km
 from app.crypto import rsa_service, totp
 from app.crypto.kdf import verify_password
 from app.services import session_service, user_service
+from app.config import KDF_ITERATIONS
 
+# Fixed decoy values, used only to spend the same time on a username that
+# does not exist as on one that does. They are not a hash of any password.
+_DUMMY_SALT = "00" * 16
+_DUMMY_HASH = "00" * 32
 
 class AuthError(Exception):
     pass
@@ -32,7 +37,12 @@ def start_login(conn, username: str, password: str,
     protected operation until complete_login succeeds.
     """
     row = user_service.find_by_username(conn, username)
+
     if row is None:
+        # Returning early here would leak which usernames exist: a miss would
+        # answer in microseconds and a hit only after a full KDF run. Derive
+        # against a dummy salt instead, so both paths cost the same, then fail.
+        verify_password(password, _DUMMY_HASH, _DUMMY_SALT, KDF_ITERATIONS)
         raise AuthError("invalid credentials")
 
     if not verify_password(password, row["password_hash"],
@@ -41,7 +51,8 @@ def start_login(conn, username: str, password: str,
 
     return session_service.create_session(
         conn, row["user_id"], mfa_verified=False,
-        ip_address=ip_address, user_agent=user_agent)
+        ip_address=ip_address, user_agent=user_agent,
+        lifetime_minutes=session_service.PENDING_LIFETIME_MINUTES)
 
 
 def complete_login(conn, token: str, code: str) -> str:

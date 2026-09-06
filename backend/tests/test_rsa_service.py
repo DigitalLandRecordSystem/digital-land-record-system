@@ -39,10 +39,15 @@ def test_text_roundtrip(keys):
     text = "Plot 42, Bunyland, Narnia. Owner: Maimuna Chowdhury."
     assert decrypt(encrypt(text, pub), priv).decode() == text
 
-def test_textbook_rsa_is_deterministic(keys):
-    pub, _ = keys
-    # No padding: identical plaintext gives identical ciphertext.
-    assert encrypt(b"APPROVED", pub) == encrypt(b"APPROVED", pub)
+def test_oaep_encryption_is_randomised(keys):
+    pub, priv = keys
+    # OAEP draws a fresh seed per block, so the same plaintext must never
+    # produce the same ciphertext twice. This is what stops an attacker
+    # holding the database from confirming a guess against the stored
+    # public key.
+    a, b = encrypt(b"APPROVED", pub), encrypt(b"APPROVED", pub)
+    assert a != b
+    assert decrypt(a, priv) == decrypt(b, priv) == b"APPROVED"
 
 def test_short_message_is_reduced(keys):
     pub, _ = keys

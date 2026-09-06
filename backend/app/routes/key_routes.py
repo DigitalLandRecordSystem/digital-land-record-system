@@ -1,10 +1,15 @@
 """Key management: inspect key versions and rotate them."""
-from flask import Blueprint, flash, redirect, render_template, url_for
+from flask import (Blueprint, flash, make_response, redirect, render_template,
+                   request, url_for)
+
+from app.config import SESSION_LIFETIME_MINUTES
 from app.crypto import key_manager as km
 from app.services import deed_service as ds
 from app.services import profile_service as ps
+from app.services import session_service
 from app.services import user_service as us
-from app.routes.deps import current_user, get_conn, login_required
+from app.routes.deps import (COOKIE_KW, SESSION_COOKIE, current_user, get_conn,
+                             login_required)
 
 bp = Blueprint("keys", __name__, url_prefix="/keys")
 
@@ -27,9 +32,24 @@ def rotate(algorithm):
 
     conn, user = get_conn(), current_user()
     km.rotate_key(conn, user["user_id"], algorithm)
+
+    # Rotating a key is a security event, so every session issued under the
+    # old key is revoked. The session doing the rotation is then re-issued as
+    # a fresh token, which signs out every other device without signing this
+    # one out mid-operation.
+    session_service.revoke_all_for_user(conn, user["user_id"])
+    replacement = session_service.create_session(
+        conn, user["user_id"], mfa_verified=True,
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get("User-Agent"))
+
     flash(f"{algorithm} key rotated. The previous version was retired but "
-          f"kept, so existing records remain readable.", "success")
-    return redirect(url_for("keys.index"))
+          f"kept, so existing records remain readable. All other sessions "
+          f"were signed out.", "success")
+    resp = make_response(redirect(url_for("keys.index")))
+    resp.set_cookie(SESSION_COOKIE, replacement,
+                    max_age=SESSION_LIFETIME_MINUTES * 60, **COOKIE_KW)
+    return resp
 
 
 @bp.route("/migrate", methods=["POST"])

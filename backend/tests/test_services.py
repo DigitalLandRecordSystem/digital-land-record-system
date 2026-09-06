@@ -118,8 +118,9 @@ def test_tampered_profile_is_detected(conn, owner):
     ps.update_profile(conn, owner["user_id"], full_name="Alice Rahman")
     row = conn.execute("SELECT full_name_enc FROM profiles WHERE user_id = ?",
                        (owner["user_id"],)).fetchone()
+    first = "Y" if row["full_name_enc"][0] == "X" else "X"
     conn.execute("UPDATE profiles SET full_name_enc = ? WHERE user_id = ?",
-                 ("X" + row["full_name_enc"][1:], owner["user_id"]))
+                 (first + row["full_name_enc"][1:], owner["user_id"]))
     conn.commit()
     with pytest.raises(ps.IntegrityFailure):
         ps.get_profile(conn, owner["user_id"])

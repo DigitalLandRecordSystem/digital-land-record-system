@@ -1,8 +1,8 @@
 """Registration and two-step login."""
 import sqlite3
 
-from flask import (Blueprint, flash, make_response, redirect, render_template,
-                   request, url_for)
+from flask import (Blueprint, current_app, flash, make_response, redirect,
+                   render_template, request, url_for)
 
 from app.config import SESSION_LIFETIME_MINUTES
 from app.crypto import totp
@@ -102,9 +102,13 @@ def verify():
             return resp
 
     # This build uses HMAC-SHA256 rather than SHA-1, so codes do not pair with
-    # standard authenticator apps. The current code is shown for demonstration.
-    demo_code = totp.generate_code(auth_service.get_totp_secret(conn, row["user_id"]))
-    return render_template("verify.html", demo_code=demo_code)
+    # standard authenticator apps. The code is therefore delivered out of band,
+    # on the server console. Printing it in the page would hand the second
+    # factor to anyone who had already passed the first, which is no second
+    # factor at all.
+    code = totp.generate_code(auth_service.get_totp_secret(conn, row["user_id"]))
+    current_app.logger.warning("[2FA] verification code for this sign-in: %s", code)
+    return render_template("verify.html")
 
 
 @bp.route("/logout", methods=["POST"])
