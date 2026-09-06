@@ -28,13 +28,13 @@
   <div class="card">
     <p class="note">Transfer ownership. An administrator must approve the request.</p>
     <form method="post"
-          action="{{ url_for('transfers.create', deed_id=deed.deed_id) }}"
-          class="inline-form">
-      <input name="to_username" placeholder="Recipient username" required>
+          action="{{ url_for('transfers.create', deed_id=deed.deed_id) }}">
+      <label>Recipient username
+        <input name="to_username" required></label>
+      <label>Message to the recipient <span class="note">(optional, encrypted
+        end-to-end &mdash; administrators cannot read it)</span>
+        <textarea name="message" rows="3" maxlength="400"></textarea></label>
       <button type="submit">Request transfer</button>
     </form>
   </div>
 {% endif %}
-
-<p><a href="{{ url_for('deeds.index') }}">Back to deeds</a></p>
-{% endblock %}

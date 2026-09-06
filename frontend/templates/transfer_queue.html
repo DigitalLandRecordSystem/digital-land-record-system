@@ -12,6 +12,10 @@
         <span class="note">{{ t.requested_on[:16].replace('T', ' ') }}</span>
       </div>
       <p class="note">{{ t.from_username }} → {{ t.to_username }}</p>
+      {% if t.has_message %}
+        <p class="note">An encrypted message is attached. It is readable only
+           by the two parties &mdash; administrators hold no key for it.</p>
+      {% endif %}
 
       <div class="actions">
         <form method="post"

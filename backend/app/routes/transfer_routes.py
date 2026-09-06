@@ -2,6 +2,7 @@
 from flask import (Blueprint, flash, redirect, render_template, request,
                    url_for)
 
+from app.services import message_service as ms
 from app.services import transfer_service as ts
 from app.routes.deps import admin_required, current_user, get_conn, login_required
 
@@ -20,11 +21,13 @@ def index():
 @login_required
 def create(deed_id):
     to_username = request.form.get("to_username", "").strip()
+    message = request.form.get("message", "").strip()
     try:
-        ts.request_transfer(get_conn(), deed_id, current_user(), to_username)
+        ts.request_transfer(get_conn(), deed_id, current_user(), to_username,
+                            message=message or None)
     except LookupError:
         flash("No such deed.", "error")
-    except (ts.TransferError, ts.AccessDenied) as exc:
+    except (ts.TransferError, ts.AccessDenied, ms.MessageError) as exc:
         flash(str(exc), "error")
         return redirect(url_for("deeds.view", deed_id=deed_id))
     flash("Transfer requested. An administrator will review it.", "success")
@@ -63,3 +66,25 @@ def reject(request_id):
         flash("Transfer rejected. The reason was encrypted for the requester.",
               "success")
     return redirect(url_for("transfers.queue"))
+
+
+@bp.route("/<request_id>/message", methods=["GET", "POST"])
+@login_required
+def message(request_id):
+    """Unlock a message by re-deriving the reader's messaging key."""
+    text = None
+    if request.method == "POST":
+        try:
+            text = ts.read_message(get_conn(), request_id, current_user(),
+                                   request.form.get("password", ""))
+        except LookupError:
+            flash("No such transfer request.", "error")
+            return redirect(url_for("transfers.index"))
+        except ts.AccessDenied as exc:
+            flash(str(exc), "error")
+            return redirect(url_for("transfers.index"))
+        except (ts.TransferError, ms.MessageError) as exc:
+            flash(str(exc), "error")
+
+    return render_template("message_unlock.html", request_id=request_id,
+                           message=text)

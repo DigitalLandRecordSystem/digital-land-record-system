@@ -47,6 +47,19 @@ CREATE TABLE user_keys (
 );
 CREATE INDEX idx_keys_active ON user_keys(user_id, algorithm, is_active);
 
+-- ============ MESSAGING KEYS ============
+-- The one key the Key Management Module deliberately does not hold. The
+-- private scalar is derived from the user's password on demand and never
+-- stored, so a full database compromise -- master key included -- yields
+-- no way to read a transfer message.
+CREATE TABLE messaging_keys (
+    user_id         TEXT PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
+    public_key      TEXT NOT NULL,          -- plaintext is correct; it's public
+    salt            TEXT NOT NULL,          -- separate from the password salt
+    iterations      INTEGER NOT NULL,
+    created_at      TEXT NOT NULL
+);
+
 -- ============ SESSIONS ============
 CREATE TABLE sessions (
     session_id      TEXT PRIMARY KEY,
@@ -99,6 +112,9 @@ CREATE TABLE transfer_requests (
     status          TEXT NOT NULL DEFAULT 'PENDING'
                     CHECK (status IN ('PENDING','APPROVED','REJECTED')),
     reason_enc      TEXT,                   -- admin's rejection reason, RSA
+    message_to_enc   TEXT,                   -- ECC, under the recipient's messaging key
+    message_from_enc TEXT,                   -- ECC, under the sender's own messaging key
+    message_hmac     TEXT,                   -- integrity over both ciphertexts
     requested_on    TEXT NOT NULL,
     decided_on      TEXT,
     decided_by      TEXT REFERENCES users(user_id),

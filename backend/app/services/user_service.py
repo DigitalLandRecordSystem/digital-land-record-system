@@ -9,6 +9,7 @@ from app.crypto import rsa_service
 from app.crypto.blind_index import blind_index
 from app.crypto.integrity import compute_tag, verify_tag
 from app.crypto.kdf import hash_password, verify_password
+from app.services import message_service
 
 ROLE_ADMIN = "ADMIN"
 ROLE_OWNER = "OWNER"
@@ -77,6 +78,7 @@ def register_user(conn, username: str, email: str, password: str,
 
     km.store_key(conn, user_id, km.RSA, rsa_public, rsa_private)
     km.store_key(conn, user_id, km.ECC, ecc_public, ecc_private)
+    message_service.create_for_user(conn, user_id, password, iterations)
     conn.commit()
 
     return user_id

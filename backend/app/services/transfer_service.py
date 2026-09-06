@@ -14,6 +14,7 @@ from app.crypto import rsa_service
 from app.crypto.integrity import compute_tag, verify_tag
 from app.services import deed_service as ds
 from app.services import user_service as us
+from app.services import message_service as ms
 
 PENDING = "PENDING"
 APPROVED = "APPROVED"
@@ -41,8 +42,13 @@ def _decision_tag(row) -> str:
 
 # ---------- requesting ----------
 
-def request_transfer(conn, deed_id: str, requester, to_username: str) -> str:
-    """An owner asks to transfer a deed to another registered user."""
+def request_transfer(conn, deed_id: str, requester, to_username: str,
+                     message: str = None) -> str:
+    """An owner asks to transfer a deed to another registered user.
+
+    An optional message is encrypted under the recipient's messaging key,
+    with a second copy under the sender's own. The server can read neither.
+    """
     deed = conn.execute("SELECT * FROM deeds WHERE deed_id = ?",
                         (deed_id,)).fetchone()
     if deed is None:
@@ -64,13 +70,23 @@ def request_transfer(conn, deed_id: str, requester, to_username: str) -> str:
     _, version = km.get_public_key(conn, requester["user_id"], km.RSA)
     request_id = str(uuid.uuid4())
 
+    to_enc = from_enc = tag = None
+    if message:
+        if len(message) > ms.MAX_LENGTH:
+            raise TransferError(
+                f"a message may be at most {ms.MAX_LENGTH} characters")
+        to_enc = ms.encrypt_for(conn, recipient["user_id"], message)
+        from_enc = ms.encrypt_for(conn, requester["user_id"], message)
+        tag = compute_tag(request_id, to_enc, from_enc)
+
     conn.execute(
         """INSERT INTO transfer_requests
            (request_id, deed_id, from_user_id, to_user_id, status,
-            requested_on, key_version)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            requested_on, key_version, message_to_enc, message_from_enc,
+            message_hmac)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (request_id, deed_id, requester["user_id"], recipient["user_id"],
-         PENDING, _now(), version),
+         PENDING, _now(), version, to_enc, from_enc, tag),
     )
     conn.commit()
     return request_id
@@ -150,6 +166,34 @@ def verify_decision(conn, request_id: str) -> bool:
                       row["decided_on"], row["decided_by"])
 
 
+def read_message(conn, request_id: str, viewer, password: str) -> str:
+    """Decrypt a transfer message for one of its two parties.
+
+    RBAC lives here rather than in the template: an administrator is not
+    merely prevented from seeing the plaintext, they have no path to it.
+    Their account holds no scalar that decrypts either copy.
+    """
+    row = _fetch(conn, request_id)
+
+    if viewer["user_id"] == row["to_user_id"]:
+        ciphertext = row["message_to_enc"]
+    elif viewer["user_id"] == row["from_user_id"]:
+        ciphertext = row["message_from_enc"]
+    else:
+        raise AccessDenied(
+            "only the parties to this transfer may read its message")
+
+    if ciphertext is None:
+        raise TransferError("this request carries no message")
+
+    if not verify_tag(row["message_hmac"], row["request_id"],
+                      row["message_to_enc"], row["message_from_enc"]):
+        raise TransferError("this message failed its integrity check")
+
+    return ms.decrypt_with_password(conn, viewer["user_id"], ciphertext,
+                                    password)
+
+
 # ---------- listing ----------
 
 def _decorate(conn, rows, viewer_id=None) -> list:
@@ -168,6 +212,11 @@ def _decorate(conn, rows, viewer_id=None) -> list:
                                             km.RSA, row["key_version"])
             entry["reason"] = rsa_service.decrypt(
                 base64.b64decode(row["reason_enc"]), private).decode("utf-8")
+
+        entry["has_message"] = row["message_to_enc"] is not None
+        entry["message_intact"] = row["message_hmac"] is None or verify_tag(
+            row["message_hmac"], row["request_id"],
+            row["message_to_enc"], row["message_from_enc"])
         out.append(entry)
     return out
 

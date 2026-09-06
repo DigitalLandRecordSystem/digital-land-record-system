@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Message{% endblock %}
+{% block content %}
+<h1>Transfer message</h1>
+
+{% if message %}
+  <div class="card">
+    <p>{{ message }}</p>
+  </div>
+  <p class="note">Decrypted with a key derived from your password just now.
+     The server does not store it and cannot read this message.</p>
+{% else %}
+  <p class="lede">This message is encrypted under a key derived from your
+     password. Enter it to unlock.</p>
+  <form method="post" class="card">
+    <label>Password
+      <input type="password" name="password" required autofocus></label>
+    <button type="submit">Unlock</button>
+  </form>
+{% endif %}
+
+<p><a href="{{ url_for('transfers.index') }}">Back to transfers</a></p>
+{% endblock %}

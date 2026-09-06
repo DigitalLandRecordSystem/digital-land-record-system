@@ -19,6 +19,16 @@
       {% if t.reason %}
         <p class="note"><strong>Reason:</strong> {{ t.reason }}</p>
       {% endif %}
+      {% if t.has_message %}
+        {% if t.message_intact %}
+          <p class="note">
+            <strong>Encrypted message attached.</strong>
+            <a href="{{ url_for('transfers.message', request_id=t.request_id) }}">Unlock</a>
+          </p>
+        {% else %}
+          <p class="tampered">This message failed its integrity check.</p>
+        {% endif %}
+      {% endif %}
       {% if not t.intact %}
         <p class="tampered">This decision record failed its integrity check.</p>
       {% endif %}
