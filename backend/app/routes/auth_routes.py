@@ -9,6 +9,7 @@ from app.crypto import totp
 from app.services import auth_service, session_service, user_service
 from app.routes.deps import (COOKIE_KW, PENDING_COOKIE, SESSION_COOKIE,
                           current_user, get_conn, login_required)
+from app.services import auth_service, mailer, session_service, user_service
 
 bp = Blueprint("auth", __name__)
 
@@ -35,15 +36,13 @@ def register():
         else:
             conn = get_conn()
             try:
-                user_id = user_service.register_user(conn, username, email, password)
+                user_service.register_user(conn, username, email, password)
             except sqlite3.IntegrityError:
                 flash("That username or email is already registered.", "error")
             except ValueError as exc:
                 flash(str(exc), "error")
             else:
-                secret = auth_service.get_totp_secret(conn, user_id)
-                return render_template("registered.html",
-                                       username=username, secret=secret)
+                return render_template("registered.html", username=username)
 
     return render_template("register.html")
 
@@ -63,6 +62,9 @@ def login():
                 user_agent=request.headers.get("User-Agent"))
         except auth_service.AuthError:
             flash("Invalid username or password.", "error")
+        except mailer.MailError:
+            flash("We could not send your verification code. "
+                  "Please try again in a moment.", "error")
         else:
             resp = make_response(redirect(url_for("auth.verify")))
             resp.set_cookie(PENDING_COOKIE, pending,
@@ -89,17 +91,30 @@ def verify():
         return resp
 
     if request.method == "POST":
-        code = request.form.get("code", "").strip()
-        try:
-            token = auth_service.complete_login(conn, pending, code)
-        except auth_service.AuthError as exc:
-            flash(str(exc), "error")
+        if request.form.get("action") == "resend":
+            try:
+                auth_service.resend(conn, pending)
+            except (auth_service.AuthError, mailer.MailError):
+                flash("We could not send a new code.", "error")
+            else:
+                flash("A new code is on its way.", "success")
         else:
-            resp = make_response(redirect(url_for("main.dashboard")))
-            resp.set_cookie(SESSION_COOKIE, token,
-                            max_age=SESSION_LIFETIME_MINUTES * 60, **COOKIE_KW)
-            resp.delete_cookie(PENDING_COOKIE, path="/")
-            return resp
+            code = request.form.get("code", "").strip()
+            try:
+                token = auth_service.complete_login(conn, pending, code)
+            except auth_service.AuthError as exc:
+                flash(str(exc), "error")
+            else:
+                resp = make_response(redirect(url_for("main.dashboard")))
+                resp.set_cookie(SESSION_COOKIE, token,
+                                max_age=SESSION_LIFETIME_MINUTES * 60,
+                                **COOKIE_KW)
+                resp.delete_cookie(PENDING_COOKIE, path="/")
+                return resp
+
+    return render_template(
+        "verify.html",
+        address=auth_service.masked_address(conn, row["user_id"]))
 
     # This build uses HMAC-SHA256 rather than SHA-1, so codes do not pair with
     # standard authenticator apps. The code is therefore delivered out of band,

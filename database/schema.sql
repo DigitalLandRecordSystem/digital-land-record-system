@@ -11,7 +11,6 @@ CREATE TABLE users (
     password_hash   TEXT NOT NULL,          -- your PBKDF2-style KDF
     password_salt   TEXT NOT NULL,
     kdf_iterations  INTEGER NOT NULL,
-    totp_secret_enc TEXT,                   -- RSA; never plaintext
     role            TEXT NOT NULL CHECK (role IN ('ADMIN','OWNER')),
     key_version     INTEGER NOT NULL,       -- which RSA key encrypted the above
     hmac_tag        TEXT NOT NULL,          -- integrity over the encrypted fields
@@ -61,6 +60,19 @@ CREATE TABLE sessions (
     revoked         INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX idx_sessions_token ON sessions(token_hash);
+
+-- ============ LOGIN OTPS ============
+CREATE TABLE login_otps (
+    otp_id          TEXT PRIMARY KEY,
+    user_id         TEXT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    session_id      TEXT NOT NULL REFERENCES sessions(session_id) ON DELETE CASCADE,
+    code_hmac       TEXT NOT NULL,          -- HMAC of the code; the code itself is never stored
+    attempts        INTEGER NOT NULL DEFAULT 0,
+    consumed        INTEGER NOT NULL DEFAULT 0,
+    issued_at       TEXT NOT NULL,
+    expires_at      TEXT NOT NULL
+);
+CREATE INDEX idx_otp_session ON login_otps(session_id, consumed);
 
 -- ============ DEEDS ============
 CREATE TABLE deeds (

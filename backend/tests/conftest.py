@@ -4,6 +4,7 @@ import uuid
 import pytest
 
 from app.config import SCHEMA_PATH
+from app.services import mailer
 
 
 @pytest.fixture
@@ -37,3 +38,11 @@ def user_id(conn):
     )
     conn.commit()
     return uid
+
+@pytest.fixture(autouse=True)
+def outbox(monkeypatch):
+    """Capture emailed codes instead of sending them. (address, code) pairs."""
+    sent = []
+    monkeypatch.setattr(mailer, "send_otp",
+                        lambda address, code: sent.append((address, code)))
+    return sent

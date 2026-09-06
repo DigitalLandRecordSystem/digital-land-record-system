@@ -9,7 +9,6 @@ from app.crypto import rsa_service
 from app.crypto.blind_index import blind_index
 from app.crypto.integrity import compute_tag, verify_tag
 from app.crypto.kdf import hash_password, verify_password
-from app.crypto.random_gen import random_bytes
 
 ROLE_ADMIN = "ADMIN"
 ROLE_OWNER = "OWNER"
@@ -62,8 +61,6 @@ def register_user(conn, username: str, email: str, password: str,
     contact_enc  = _encrypt_field(contact, rsa_public) if contact else None
 
     password_hash, password_salt, iterations = hash_password(password, KDF_ITERATIONS)
-    totp_secret = base64.b32encode(random_bytes(20)).decode()
-    totp_enc = _encrypt_field(totp_secret, rsa_public)
 
     tag = compute_tag(username_enc, email_enc, contact_enc, role)
 
@@ -71,11 +68,11 @@ def register_user(conn, username: str, email: str, password: str,
         """INSERT INTO users
            (user_id, username_idx, username_enc, email_idx, email_enc,
             contact_enc, password_hash, password_salt, kdf_iterations,
-            totp_secret_enc, role, key_version, hmac_tag, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)""",
+            role, key_version, hmac_tag, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)""",
         (user_id, username_idx, username_enc, email_idx, email_enc,
          contact_enc, password_hash, password_salt, iterations,
-         totp_enc, role, tag, datetime.now(timezone.utc).isoformat()),
+         role, tag, datetime.now(timezone.utc).isoformat()),
     )
 
     km.store_key(conn, user_id, km.RSA, rsa_public, rsa_private)
@@ -132,19 +129,17 @@ def reencrypt_account(conn, user_id: str) -> None:
     username = _decrypt_field(row["username_enc"], old_private)
     email = _decrypt_field(row["email_enc"], old_private)
     contact = _decrypt_field(row["contact_enc"], old_private)
-    totp_secret = _decrypt_field(row["totp_secret_enc"], old_private)
 
     public, version = km.get_public_key(conn, user_id, km.RSA)
     username_enc = _encrypt_field(username, public)
     email_enc = _encrypt_field(email, public)
     contact_enc = _encrypt_field(contact, public)
-    totp_enc = _encrypt_field(totp_secret, public)
     tag = compute_tag(username_enc, email_enc, contact_enc, row["role"])
 
     conn.execute(
         """UPDATE users SET username_enc = ?, email_enc = ?, contact_enc = ?,
-               totp_secret_enc = ?, key_version = ?, hmac_tag = ?
+                key_version = ?, hmac_tag = ?
            WHERE user_id = ?""",
-        (username_enc, email_enc, contact_enc, totp_enc, version, tag, user_id),
+        (username_enc, email_enc, contact_enc, version, tag, user_id),
     )
     conn.commit()

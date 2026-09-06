@@ -1,12 +1,9 @@
-import time
 import pytest
 
-from app.crypto import totp
 from app.services import auth_service as auth
 from app.services import session_service as ss
 from app.services import user_service as us
-
-ALIGNED = 1_700_000_040          # exact multiple of 30, so windows are clean
+from app.services import otp_service as otp
 
 
 @pytest.fixture
@@ -15,44 +12,76 @@ def account(conn):
     return uid
 
 
-# ---- TOTP ----
+# ---- email OTP ----
 
-def test_code_is_six_digits():
-    secret = totp.generate_secret()
-    code = totp.generate_code(secret, ALIGNED)
+def test_code_is_six_digits(conn, account, outbox):
+    auth.start_login(conn, "maimuna", "hunter2")
+    address, code = outbox[-1]
+    assert address == "maimuna@example.com"
     assert len(code) == 6 and code.isdigit()
 
 
-def test_code_is_stable_within_a_window():
-    secret = totp.generate_secret()
-    assert totp.generate_code(secret, ALIGNED) == totp.generate_code(secret, ALIGNED + 29)
+def test_plaintext_code_never_stored(conn, account, outbox):
+    auth.start_login(conn, "maimuna", "hunter2")
+    code = outbox[-1][1]
+    row = conn.execute("SELECT * FROM login_otps").fetchone()
+    assert code not in " ".join(str(v) for v in tuple(row))
 
 
-def test_code_changes_between_windows():
-    secret = totp.generate_secret()
-    assert totp.generate_code(secret, ALIGNED) != totp.generate_code(secret, ALIGNED + 30)
+def test_code_is_single_use(conn, account, outbox):
+    """A code that has been accepted once is consumed and cannot be reused."""
+    pending = auth.start_login(conn, "maimuna", "hunter2")
+    code = outbox[-1][1]
+    session_id = ss.validate_session(conn, pending,
+                                     require_mfa=False)["session_id"]
+    assert otp.verify(conn, session_id, code)
+    assert not otp.verify(conn, session_id, code)
 
 
-def test_verify_accepts_current_and_adjacent():
-    secret = totp.generate_secret()
-    for offset in (-30, 0, 30):
-        code = totp.generate_code(secret, ALIGNED + offset)
-        assert totp.verify_code(secret, code, ALIGNED)
+def test_code_is_bound_to_its_session(conn, account, outbox):
+    """A code issued for one sign-in cannot complete a different one."""
+    auth.start_login(conn, "maimuna", "hunter2")
+    first_code = outbox[-1][1]
+    second = auth.start_login(conn, "maimuna", "hunter2")
+    with pytest.raises(auth.AuthError):
+        auth.complete_login(conn, second, first_code)
 
 
-def test_verify_rejects_distant_and_malformed():
-    secret = totp.generate_secret()
-    assert not totp.verify_code(secret, totp.generate_code(secret, ALIGNED + 300), ALIGNED)
-    assert not totp.verify_code(secret, "12345", ALIGNED)
-    assert not totp.verify_code(secret, "abcdef", ALIGNED)
-    assert not totp.verify_code(secret, "", ALIGNED)
+def test_expired_code_rejected(conn, account, outbox):
+    pending = auth.start_login(conn, "maimuna", "hunter2")
+    code = outbox[-1][1]
+    conn.execute("UPDATE login_otps SET expires_at = '2000-01-01T00:00:00+00:00'")
+    conn.commit()
+    with pytest.raises(auth.AuthError):
+        auth.complete_login(conn, pending, code)
+
+
+def test_attempts_are_capped(conn, account, outbox):
+    from app.config import OTP_MAX_ATTEMPTS
+    pending = auth.start_login(conn, "maimuna", "hunter2")
+    code = outbox[-1][1]
+    for _ in range(OTP_MAX_ATTEMPTS):
+        with pytest.raises(auth.AuthError):
+            auth.complete_login(conn, pending, "000000")
+    with pytest.raises(auth.AuthError):        # the real code no longer works
+        auth.complete_login(conn, pending, code)
+
+
+def test_resend_invalidates_the_previous_code(conn, account, outbox):
+    pending = auth.start_login(conn, "maimuna", "hunter2")
+    old = outbox[-1][1]
+    auth.resend(conn, pending)
+    new = outbox[-1][1]
+    with pytest.raises(auth.AuthError):
+        auth.complete_login(conn, pending, old)
+    assert auth.complete_login(conn, pending, new)
 
 
 # ---- login flow ----
 
-def test_full_login(conn, account):
+def test_full_login(conn, account, outbox):
     pending = auth.start_login(conn, "maimuna", "hunter2")
-    code = totp.generate_code(auth.get_totp_secret(conn, account))
+    code = outbox[-1][1]
     token = auth.complete_login(conn, pending, code)
     assert token != pending
     assert auth.current_user(conn, token)["user_id"] == account
@@ -64,10 +93,10 @@ def test_session_unusable_before_second_factor(conn, account):
     assert auth.current_user(conn, token) is None
 
 
-def test_pending_token_dies_after_verification(conn, account):
+def test_pending_token_dies_after_verification(conn, account, outbox):
     """Token rotation at the MFA boundary: the pre-MFA token is never upgraded."""
     pending = auth.start_login(conn, "maimuna", "hunter2")
-    code = totp.generate_code(auth.get_totp_secret(conn, account))
+    code = outbox[-1][1]
     token = auth.complete_login(conn, pending, code)
     assert auth.current_user(conn, pending) is None
     assert auth.current_user(conn, token) is not None
@@ -90,9 +119,9 @@ def test_wrong_code_rejected(conn, account):
     assert auth.current_user(conn, token) is None
 
 
-def test_logout_revokes(conn, account):
+def test_logout_revokes(conn, account, outbox):
     pending = auth.start_login(conn, "maimuna", "hunter2")
-    code = totp.generate_code(auth.get_totp_secret(conn, account))
+    code = outbox[-1][1]
     token = auth.complete_login(conn, pending, code)
     assert auth.logout(conn, token)
     assert auth.current_user(conn, token) is None

@@ -27,7 +27,7 @@ def test_personal_data_is_not_plaintext_in_db(conn):
                      contact="01700000000")
     row = conn.execute("SELECT * FROM users").fetchone()
 
-    for column in ("username_enc", "email_enc", "contact_enc", "totp_secret_enc"):
+    for column in ("username_enc", "email_enc", "contact_enc"):
         assert "maimuna" not in row[column]
         assert "01700000000" not in row[column]
 

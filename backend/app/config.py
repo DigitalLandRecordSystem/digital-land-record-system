@@ -42,3 +42,15 @@ SESSION_LIFETIME_MINUTES = int(os.getenv("SESSION_LIFETIME_MINUTES", "30"))
 BLIND_INDEX_KEY  = _secret("BLIND_INDEX_KEY")
 INTEGRITY_KEY    = _secret("INTEGRITY_KEY")
 FLASK_SECRET_KEY = _secret("FLASK_SECRET_KEY")
+OTP_KEY          = _secret("OTP_KEY")
+
+# ---- email one-time passwords ----
+OTP_TTL_SECONDS  = int(os.getenv("OTP_TTL_SECONDS", "300"))
+OTP_MAX_ATTEMPTS = int(os.getenv("OTP_MAX_ATTEMPTS", "3"))
+OTP_TRANSPORT    = os.getenv("OTP_TRANSPORT", "console").lower()
+
+SMTP_HOST     = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT     = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER     = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM     = os.getenv("SMTP_FROM", "") or SMTP_USER

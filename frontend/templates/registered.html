@@ -4,12 +4,9 @@
 <h1>Account created</h1>
 <div class="card">
   <p><strong>{{ username }}</strong> is registered. Your username, email and
-     one-time-password secret are stored encrypted.</p>
-  <p>Your verification secret:</p>
-  <p class="code">{{ secret }}</p>
-  <p class="note">This build derives codes with HMAC-SHA256, so it does not pair
-     with standard authenticator apps. The current code is displayed on the
-     verification page.</p>
+     contact details are stored encrypted.</p>
+  <p class="note">When you sign in, a six-digit code will be emailed to your
+     registered address as the second factor.</p>
 </div>
 <p><a href="{{ url_for('auth.login') }}">Continue to sign in</a></p>
 {% endblock %}

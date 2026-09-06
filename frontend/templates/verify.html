@@ -2,14 +2,17 @@
 {% block title %}Verification{% endblock %}
 {% block content %}
 <h1>Verification</h1>
-<p class="note">Step 2 of 2 — one-time code. Your password alone grants no access.</p>
+<p class="note">Step 2 of 2 &mdash; one-time code. Your password alone grants no access.</p>
 <form method="post" class="card">
   <label>Six-digit code
     <input name="code" required autofocus inputmode="numeric"
-           pattern="[0-9]{6}" maxlength="6" autocomplete="off"></label>
+           pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code"></label>
   <button type="submit">Verify</button>
 </form>
-<p class="note">Codes in this build are derived with HMAC-SHA256 and do not pair
-   with standard authenticator apps, so the code is delivered out of band on the
-   server console rather than in this page.</p>
+<p class="note">We emailed a code to <strong>{{ address }}</strong>.
+   It expires in five minutes and can be used once.</p>
+<form method="post">
+  <input type="hidden" name="action" value="resend">
+  <button type="submit" class="link">Send a new code</button>
+</form>
 {% endblock %}

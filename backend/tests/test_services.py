@@ -2,7 +2,6 @@
 import pytest
 
 from app.crypto import key_manager as km
-from app.crypto import totp
 from app.services import auth_service as auth
 from app.services import deed_service as ds
 from app.services import profile_service as ps
@@ -212,13 +211,13 @@ def test_account_readable_after_rsa_rotation(conn, owner):
     assert us.get_user_details(conn, owner["user_id"])["username"] == "alice"
 
 
-def test_login_survives_rsa_rotation(conn, owner):
-    """Regression: the TOTP secret became unreadable after rotation, which
-    locked the user out of their own account."""
+def test_login_survives_rsa_rotation(conn, owner, outbox):
+    """Regression: the login path decrypted the user's stored fields with the
+    active key rather than the version that wrote them, which silently locked
+    every rotated user out of their own account."""
     km.rotate_key(conn, owner["user_id"], km.RSA)
     pending = auth.start_login(conn, "alice", "hunter2")
-    code = totp.generate_code(auth.get_totp_secret(conn, owner["user_id"]))
-    token = auth.complete_login(conn, pending, code)
+    token = auth.complete_login(conn, pending, outbox[-1][1])
     assert auth.current_user(conn, token)["user_id"] == owner["user_id"]
 
 
